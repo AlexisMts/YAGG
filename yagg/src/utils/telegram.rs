@@ -5,16 +5,12 @@ use crate::models::GradeDiff;
 
 // Constructs a message string from a vector of GradeDiff, indicating new or updated grades.
 pub fn parse_new_grades_message(diffs: Vec<GradeDiff>) -> String {
-    // Initial message header
-    let mut message = String::from("📚 New Grades Available! 📚\n\n");
+    let mut message = String::from("📚 Nouvelles Notes Disponibles! 📚\n\n");
     for diff in diffs {
-        // Assigns an emoji based on the grade category
         let emoji = if diff.category == "laboratoire" { "🔬" } else { "📖" };
-        // Appends each new grade information to the message
-        message.push_str(&format!("{} New grade in {} for {} : {}\n", emoji, diff.category, diff.course, diff.grade));
+        message.push_str(&format!("{} Nouvelle note de {} en {} : {}\n", emoji, diff.category, diff.course, diff.grade));
     }
-    // Footer message
-    message += "\nKeep up the excellence! 🚀";
+    message += "\nGardez le cap sur l'excellence ! 🚀";
     message
 }
 
