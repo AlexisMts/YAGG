@@ -1,0 +1,6 @@
+version: '3'
+services:
+  myapp:
+    build: .
+    environment:
+      - RUST_LOG=debug
