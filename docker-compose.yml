@@ -1,6 +1,6 @@
 version: '3'
 services:
-  myapp:
+  yagg:
     build: .
     environment:
       - RUST_LOG=debug

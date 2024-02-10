@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use anyhow::{anyhow, Context};
@@ -126,15 +127,13 @@ pub fn parse_grades(html_content: &str) -> Vec<Course> {
     courses
 }
 
-// Compares fetched courses and grades with previously stored data to identify any differences.
+// Adjust the diff_grades function to handle multiple occurrences of the same grade.
 pub fn diff_grades(fetched_courses: &[Course]) -> Result<Vec<GradeDiff>> {
     let file_path = "grades.json";
     let mut diffs: Vec<GradeDiff> = Vec::new();
 
-    // Checks if the grades file exists and is not empty.
     let file_exists_and_non_empty = Path::new(file_path).exists() && fs::metadata(file_path).map(|m| m.len() > 0).unwrap_or(false);
 
-    // Loads previous courses from the file, if available.
     let previous_courses: Vec<Course> = if file_exists_and_non_empty {
         match fs::read_to_string(file_path) {
             Ok(contents) => serde_json::from_str(&contents)?,
@@ -144,37 +143,50 @@ pub fn diff_grades(fetched_courses: &[Course]) -> Result<Vec<GradeDiff>> {
         Vec::new()
     };
 
-    // Identifies new or updated grades compared to previously stored data.
-    if !previous_courses.is_empty() {
-        for fetched_course in fetched_courses {
-            let prev_course = previous_courses.iter().find(|&c| c.name == fetched_course.name);
+    // Convert the list of grades into a map that counts the occurrences of each grade in each category.
+    let prev_courses_map = to_grade_count_map(&previous_courses);
 
-            for fetched_grade in &fetched_course.grades {
-                if let Some(prev_course) = prev_course {
-                    let grade_not_found = !prev_course.grades.iter().any(|g| g.value == fetched_grade.value && g.category == fetched_grade.category);
+	for fetched_course in fetched_courses {
+		// fetched_course_map is similarly structured to prev_courses_map but for the current fetched course
+		let fetched_course_map = to_grade_count_map(&[fetched_course.clone()]);
 
-                    if grade_not_found {
-                        diffs.push(GradeDiff {
-                            course: fetched_course.name.clone(),
-                            category: fetched_grade.category.clone(),
-                            grade: fetched_grade.value.clone(),
-                        });
-                    }
-                } else {
-                    // Considers all grades from new courses as differences.
+		// Iterate over categories and their grades for the fetched course
+		for (category, grades) in fetched_course_map.get(&fetched_course.name).unwrap_or(&BTreeMap::new()) {
+		    for (grade, &count) in grades {
+		        let prev_count = prev_courses_map.get(&fetched_course.name)
+		                            .and_then(|categories| categories.get(category))
+		                            .and_then(|grades| grades.get(grade))
+		                            .copied()
+		                            .unwrap_or(0);
+
+		        // Add differences to vector if there is any
+                // Also supports the case where we receive two notes with same value, of same category in the same course
+                for _ in 0..(count-prev_count) {
                     diffs.push(GradeDiff {
                         course: fetched_course.name.clone(),
-                        category: fetched_grade.category.clone(),
-                        grade: fetched_grade.value.clone(),
+                        category: category.clone(),
+                        grade: grade.clone(),
                     });
                 }
-            }
-        }
-    }
+		    }
+		}
+	}	
 
-    // Updates the file with the current grades for future comparisons.
     fs::write(file_path, to_string_pretty(&fetched_courses)?)?;
 
-    // Returns identified differences, if any, except for the first run when the file was empty or didn't exist.
+    println!("{:?}", diffs);
     Ok(if file_exists_and_non_empty { diffs } else { Vec::new() })
+}
+
+// Converts a list of courses into a map that counts the occurrences of each grade within each category of each course.
+fn to_grade_count_map(courses: &[Course]) -> BTreeMap<String, BTreeMap<String, BTreeMap<String, usize>>> {
+    let mut map = BTreeMap::new();
+    for course in courses {
+        let course_entry = map.entry(course.name.clone()).or_insert_with(BTreeMap::new);
+        for grade in &course.grades {
+            let category_entry = course_entry.entry(grade.category.clone()).or_insert_with(BTreeMap::new);
+            *category_entry.entry(grade.value.clone()).or_insert(0) += 1;
+        }
+    }
+    map
 }
