@@ -174,7 +174,6 @@ pub fn diff_grades(fetched_courses: &[Course]) -> Result<Vec<GradeDiff>> {
 
     fs::write(file_path, to_string_pretty(&fetched_courses)?)?;
 
-    println!("{:?}", diffs);
     Ok(if file_exists_and_non_empty { diffs } else { Vec::new() })
 }
 
