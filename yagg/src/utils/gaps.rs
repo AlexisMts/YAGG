@@ -41,7 +41,7 @@ pub async fn retrieve_grades() -> Result<String> {
         // Gaps does a first GET request to load the static pages (without the grades)
         // Once the page is ready, it executes a POST request to get the grades
         // We only do the second request, as the first one is not necessary
-        let request_body = [("rs", "smartReplacePart"), ("rsargs", "[\"result\",\"result\",null,null,null,null]")];
+        let request_body = [("rs", "replaceHtmlPart"), ("rsargs", "[\"result\",null]")];
         let url = "https://gaps.heig-vd.ch/consultation/controlescontinus/consultation.php";
         let grades_response = client.post(url)
             .form(&request_body)
@@ -58,12 +58,12 @@ pub async fn retrieve_grades() -> Result<String> {
 // Parses the HTML response to extract the raw HTML content for further processing.
 fn parse_html_response(html_content: &str) -> String {
     let decoded_html = Cow::from(html_content);
-    let regex_pattern = r#"\+:\"@.*@(.*)@.*@\""#;
+    let regex_pattern = r#"\+:"\{\\"parts\\":\{\\"result\\":\\"(.*)\\"}}""#;
     let re = Regex::new(regex_pattern).unwrap();
     let matches = re.captures(&decoded_html).unwrap();
     let mut parsed_html = matches.get(1).map_or("", |m| m.as_str()).to_string();
-    parsed_html = parsed_html.replace("\\\"", "\"");
-    parsed_html = parsed_html.replace("\\/", "/");
+    parsed_html = parsed_html.replace("\\\\\\\"", "\"");
+    parsed_html = parsed_html.replace("\\\\\\/", "/");
     parsed_html
 }
 
@@ -101,6 +101,8 @@ pub fn parse_grades(html_content: &str) -> Vec<Course> {
                     last_category = "cours".to_string();
                 } else if first.text().collect::<Vec<_>>()[0].contains("Laboratoire") {
                     last_category = "laboratoire".to_string();
+                } else if first.text().collect::<Vec<_>>()[0].contains("Projet") {
+                    last_category = "projet".to_string();
                 }
 
                 // Extracts and adds grades to the current course.
