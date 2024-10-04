@@ -7,8 +7,16 @@ use crate::models::GradeDiff;
 pub fn parse_new_grades_message(diffs: Vec<GradeDiff>) -> String {
     let mut message = String::from("📚 Nouvelles Notes Disponibles! 📚\n\n");
     for diff in diffs {
-        let emoji = if diff.category == "laboratoire" { "🔬" } else { "📖" };
-        message.push_str(&format!("{} Nouvelle note de {} en {} : {}\n", emoji, diff.category, diff.course, diff.grade));
+        let emoji = match diff.category.as_str() {
+            "projet" => "🚀",
+            "cours" => "📖",
+            "laboratoire" => "🔬",
+            _ => "📖"
+        };
+
+        message.push_str(&format!("{} Nouvelle note de {} en {} : {}\n", emoji, diff.category, diff.course, diff.name));
+        message.push_str(&format!("{} Note : {} et moyenne de classe : {}\n", emoji, diff.grade, diff.average));
+
     }
     message += "\nGardez le cap sur l'excellence ! 🚀";
     message
