@@ -1,28 +1,30 @@
 ##
 ## Build stage
 ##
-FROM rust:latest as builder
+FROM rust:alpine AS builder
 
-RUN apt-get update && apt-get install -y cron
+WORKDIR /build/yagg
 
-WORKDIR /usr/src/yagg
+RUN apk update && apk add libressl-dev musl-dev
 
-COPY ./yagg .
+COPY yagg .
 
-RUN cargo build
+RUN cargo build --release
 
 ##
 ## Final stage
 ##
-FROM ubuntu:24.04
-WORKDIR /usr/src/yagg
+FROM alpine:3.20
+WORKDIR /app
 
-RUN apt-get update && apt-get -y install cron && apt-get clean
+ENV GAPS_USERNAME=your_username \
+    GAPS_PASSWORD=your_password \
+    BOT_TOKEN=telergam_api_key \
+    CHAT_ID=telegram_chat_id
 
-COPY --from=builder /usr/src/yagg/target/debug/yagg .
+COPY docker/root /var/spool/cron/crontabs/
 
-RUN echo "*/5 * * * * cd /usr/src/yagg/ && ./yagg >> /var/log/cron.log 2>&1" > /etc/cron.d/yagg-cron
+COPY --from=builder /build/yagg/target/release/yagg /app/yagg
+RUN chmod +x /app/yagg
 
-RUN chmod 0644 /etc/cron.d/yagg-cron && crontab /etc/cron.d/yagg-cron
-
-CMD ["cron", "-f"]
+CMD ["crond", "-f"]
