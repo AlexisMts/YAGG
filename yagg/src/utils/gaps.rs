@@ -110,7 +110,7 @@ pub fn parse_grades(html_content: &str) -> Vec<Course> {
                 let grade_element = if tds.len() > 1 { &tds[tds.len() - 1] } else { &tds[0] };
                 if let Some(class_attr) = grade_element.value().attr("class") {
                     if class_attr.contains("bodyCC") {
-                        let name = name_element.text().collect::<Vec<_>>()[0].split_whitespace().next().unwrap_or("-");
+                        let name = name_element.text().collect::<Vec<_>>().join(" ");
                         let average_value = average_element.text().collect::<Vec<_>>()[0].split_whitespace().next().unwrap_or("-");
                         let grade_value = grade_element.text().collect::<Vec<_>>()[0].split_whitespace().next().unwrap_or("-");
                         if grade_value != "-" {

@@ -18,7 +18,6 @@ pub fn parse_new_grades_message(diffs: Vec<GradeDiff>) -> String {
         message.push_str(&format!("{} Note : {} et moyenne de classe : {}\n", emoji, diff.grade, diff.average));
 
     }
-    message += "\nGardez le cap sur l'excellence ! 🚀";
     message
 }
 
